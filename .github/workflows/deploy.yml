@@ -1,0 +1,77 @@
+name: React Todo CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  # =========================
+  # CI - Build
+  # =========================
+  build:
+    name: Build React Application
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '16'
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build React Application
+        run: npm run build
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: react-build
+          path: build/
+
+
+  # =========================
+  # CD - Deploy
+  # =========================
+  deploy:
+    name: Deploy to Azure VM
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: react-build
+          path: build/
+
+      - name: Copy Build to Azure VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          password: ${{ secrets.VM_PASSWORD }}
+          source: "build/*"
+          target: "/tmp/react-build"
+
+      - name: Deploy React Application
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          password: ${{ secrets.VM_PASSWORD }}
+          script: |
+            sudo rm -rf /var/www/html/*
+            sudo cp -r /tmp/react-build/* /var/www/html/
+            sudo nginx -t
+            sudo systemctl reload nginx
+            echo "React application deployed successfully!"
