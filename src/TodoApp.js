@@ -64,7 +64,7 @@ function TodoApp() {
                         margin: '8px',
                     }}
                 >
-                    <img src="/devopsinsiderslogo.png" alt="My Logo" />
+                    <img src={`${process.env.PUBLIC_URL}/devopsinsiderslogo.png`} alt="My Logo" />
                     ToDo App
                 </Typography>
                 <div>
